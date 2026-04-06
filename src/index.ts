@@ -13,11 +13,11 @@ import process from 'process';
 import path from 'path';
 import fs from 'fs';
 import { ConfigManager } from './config/index.js';
-import { OpenAIProvider } from './providers/openai.js';
-import { GeminiProvider } from './providers/gemini.js';
-import { LMStudioProvider } from './providers/lmstudio.js';
+import { OpenAIProvider } from './providers/openai/index.js';
+import { GeminiProvider } from './providers/gemini/index.js';
+import { LMStudioProvider } from './providers/lmstudio/index.js';
 import { AIAgent } from './core/agent.js';
-import { LLMProvider } from './providers/provider.js';
+import { LLMProvider } from './providers/common/provider.js';
 import { loadPlugins } from './tools/index.js'; // 🔌 引入插件載入器
 import { marked } from 'marked';
 import TerminalRenderer from 'marked-terminal';
@@ -454,8 +454,11 @@ const setupConfig = async () => {
 
     try {
       if (isInstalled) {
-        // 💡 執行 npm uninstall -g (使用 package.json 中的全名)
-        execSync('npm uninstall -g simple-cli-agent', { stdio: 'ignore' });
+        // 💡 使用 package.json 中的正確名稱進行解除連結
+        execSync(`npm uninstall -g ${packageJson.name}`, { stdio: 'ignore' });
+        // 額外保險：在某些環境下 npm link 需要 unlink
+        try { execSync(`npm unlink`, { stdio: 'ignore' }); } catch {}
+        
         spinner.succeed(chalk.green('✅ 已成功解除全域指令連結！您可以隨時重新開啟。'));
       } else {
         // 💡 執行 npm link
@@ -466,7 +469,7 @@ const setupConfig = async () => {
       spinner.fail(chalk.red(`❌ ${actionName}失敗: ${e.message}`));
       console.log(chalk.yellow(`\n💡 建議：`));
       console.log(chalk.dim(`1. 請嘗試以「系統管理員身分 (Administrator)」重新啟動終端機。`));
-      console.log(chalk.dim(`2. 您也可以手動輸入: ${chalk.cyan(`npm uninstall -g simple-cli-agent`)} 試試看。`));
+      console.log(chalk.dim(`2. 您也可以手動輸入: ${chalk.cyan(`npm uninstall -g ${packageJson.name}`)} 試試看。`));
     }
     await inquirer.prompt([{ type: 'input', name: 'pause', message: '按回車鍵返回選單...', prefix: '>' }]);
     return setupConfig();

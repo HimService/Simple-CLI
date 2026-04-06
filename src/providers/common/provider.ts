@@ -19,6 +19,7 @@ export interface Message {
       rawCall?: any;         // 📦 存放原始 API 調用物件 (包含 thought_signature 等)
     };
   }>;
+  rawParts?: any[];          // 🔐 新增：存放原始 API 返回的 parts 陣列 (用於全量鏡像)
 }
 
 export interface ToolDefinition {
