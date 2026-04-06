@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { LLMProvider, Message, ToolDefinition } from './provider.js';
+import { LLMProvider, Message, ToolDefinition } from '../common/provider.js';
 
 /**
  *  Gemini 提供商實作
@@ -43,8 +43,16 @@ export class GeminiProvider extends LLMProvider {
    */
   private formatMessages(messages: Message[]) {
     return messages
-      .filter(m => m.role !== 'system') // 💡 System 訊息將另行處理
+      .filter(m => m.role !== 'system')
       .map(m => {
+        // 🔐 全量鏡像策略：優先使用原始數據塊 (包含 thought_signature)
+        if (m.rawParts) {
+          return {
+            role: m.role === 'assistant' ? 'model' : m.role,
+            parts: m.rawParts
+          };
+        }
+
         if (m.role === 'tool') {
           return {
             role: 'function',
@@ -102,13 +110,26 @@ export class GeminiProvider extends LLMProvider {
       const history = this.formatMessages(messages.slice(0, -1));
       const lastMessage = messages[messages.length - 1];
       
-      const chat = model.startChat({ history });
-
-      const result = await chat.sendMessage(
-        lastMessage.role === 'tool' 
-          ? [{ functionResponse: { name: lastMessage.name!, response: { content: lastMessage.content } } }] as any
-          : lastMessage.content
-      );
+      // 🚀 改用 generateContent 以獲得對協議數據的 100% 控制權
+      const result = await model.generateContent({
+        contents: [
+          ...history,
+          ...(lastMessage.role === 'tool' 
+            ? [{ 
+                role: 'function', 
+                parts: [{ 
+                  functionResponse: { 
+                    name: lastMessage.name!, 
+                    response: { content: lastMessage.content } 
+                  } 
+                }] 
+              }] as any 
+            : [{ 
+                role: 'user', 
+                parts: [{ text: lastMessage.content }] 
+              }] as any)
+        ]
+      });
 
       const response = await result.response;
       
@@ -119,13 +140,14 @@ export class GeminiProvider extends LLMProvider {
       return {
         role: 'assistant',
         content: response.text?.() || '',
+        rawParts: rawParts, // 🔐 關鍵核心：全量鏡像保存所有原始數據塊 (含思考簽名)
         toolCalls: toolParts?.map((p: any) => ({
           id: Math.random().toString(36).substring(7), 
           type: 'function',
           function: {
             name: p.functionCall.name,
             arguments: JSON.stringify(p.functionCall.args),
-            rawCall: p.functionCall // 🔐 關鍵核心：鏡像保留原始調用物件
+            rawCall: p.functionCall
           }
         })) as any
       };
