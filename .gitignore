@@ -1,0 +1,27 @@
+# 依賴項 (不要上傳，需 npm install)
+node_modules/
+
+# 編譯後的 JavaScript (從 src 編譯而來)
+dist/
+
+# 敏感資訊 (API Keys, 密鑰) - 極重要！
+.env
+.env.local
+.env.*.local
+
+# 日誌檔
+logs/
+*.log
+npm-debug.log*
+
+# 作業系統垃圾檔
+.DS_Store
+Thumbs.db
+
+# 整合開發環境設定
+.vscode/
+.idea/
+*.swp
+
+# 測試資料夾 (排除上傳)
+TEST/
