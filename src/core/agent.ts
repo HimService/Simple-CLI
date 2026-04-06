@@ -1,4 +1,4 @@
-import { LLMProvider, Message } from '../providers/provider.js';
+import { LLMProvider, Message } from '../providers/common/provider.js';
 import { allTools, allToolDefinitions, toolLogger } from '../tools/index.js';
 
 export interface AgentOptions {
