@@ -18,45 +18,8 @@
 
 本專案最強大的地方在於其 **「零干預插件系統」**。AI 的所有能力本質上都是一個「工具 (Tool)」，您可以透過在 `plugins/` 目錄新增腳本來擴展它。
 
-### 1. 插件存放路徑
-將您編寫好的 `.js` 檔案放入專案根目錄的 `plugins/` 資料夾中。
+你可以[在此查看文檔](docs/PLUGINS_GUIDE.md)
 
-### 2. 插件結構規範
-每個插件必須使用 **ESM (ECMAScript Modules)** 格式導出一個包含 `definition` 與 `handler` 的對象：
-
-```javascript
-// plugins/myScanner.js
-export default {
-  // 📜 工具定義：告訴 AI 這是在做什麼、需要什麼參數
-  definition: {
-    name: 'scan_network',
-    description: '掃描本地網路中的設備狀態',
-    parameters: {
-      type: 'object',
-      properties: {
-        range: { 
-          type: 'string', 
-          description: 'IP 範圍，例如: 192.168.1.0/24' 
-        }
-      },
-      required: ['range']
-    }
-  },
-
-  // ⚙️ 執行邏輯：當 AI 決定調用此工具時，實際執行的代碼
-  handler: async ({ range }) => {
-    // 您可以在此調用任何 Node.js API 或執行指令
-    return `成功掃描範圍 ${range}，發現 3 個活動設備。`;
-  }
-};
-```
-
-### 3. 解構核心組件
--   **`definition.name`**: 工具的唯一標識符，建議使用蛇形命名法 (snake_case)。
--   **`definition.description`**: **關鍵部分！** 請詳細描述此工具的用途。AI 是根據這段文字來判斷「何時」該使用您的工具。
--   **`handler`**: 一個異步函式，接收參數並返回字串。返回的字串將作為「觀測結果」回傳給 AI 進行下一輪思考。
-
----
 
 ## 📦 安裝與快速啟動
 
@@ -87,35 +50,29 @@ export default {
    npm run build
    ```
 
-3. **設置全域指令 (強烈建議)**:
-   執行以下指令將 `spc` 連結到系統路徑，讓您可以在**任何資料夾**下啟動它。
+3. **啟動專案**:
+   在專案目錄下執行指令。
    ```bash
-   npm link
+   node dist/index.js
    ```
 
 4. **初始化配置**:
    設定您的 API Key (如 OpenAI 或 Gemini) 與預設模型。
-   ```bash
-   spc config
-   ```
+   首頁-->模型與 API 配置-->模型提供商與 API 設定
+  
+5. **設置全域指令 (強烈建議)**:
+   執行以下指令將 `spc` 連結到系統路徑，讓您可以在**任何資料夾**下啟動它。
+   首頁-->模型與 API 配置-->全域啟動指令 (spc)
 
 5. **開始對話**:
-   ```bash
-   spc chat
-   ```
-
-### 🛠️ 開發中啟動 (Developer Mode)
-如果您正在修改代碼且不想每次都編譯，可以直接使用 `ts-node` 執行：
-```bash
-npm run dev -- chat
-```
+  首頁-->開始互動式對話/快速提問
 
 ### ✅ 驗證安裝
-您可以執行以下指令確認安裝是否成功：
+您可以執行以下指令確認安裝是否成功(你需要先設置全域指令!!!)：
 ```bash
 spc --version
 ```
-若輸出 `1.0.0` 或目前版本號，即代表安裝成功！
+若輸出目前版本號，即代表安裝成功！
 
 ---
 
@@ -146,4 +103,4 @@ spc --version
 ```
 
 ## 📄 授權協議
-MIT License. 歡迎 Fork 與二次開發！
+請閱 License.txt
