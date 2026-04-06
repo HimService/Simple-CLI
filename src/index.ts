@@ -12,6 +12,7 @@ import ora from 'ora';
 import process from 'process';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { ConfigManager } from './config/index.js';
 import { OpenAIProvider } from './providers/openai/index.js';
 import { GeminiProvider } from './providers/gemini/index.js';
@@ -22,7 +23,6 @@ import { loadPlugins } from './tools/index.js'; // 🔌 引入插件載入器
 import { marked } from 'marked';
 import TerminalRenderer from 'marked-terminal';
 import readline from 'readline';
-import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 // 🎨 配置 Markdown 終端機渲染 (高質感設計)
@@ -127,7 +127,7 @@ const createAgent = (provider: LLMProvider) => {
     security: config.security,
     isProjectMode: isProjectMode,
     projectRules: projectRules // 👤 傳遞專案規則
-  });
+  }, config.globalPrompt); // 📝 注入全域系統提示 (若無則使用 Agent 預設)
 
   // 當 AI 想要調用工具時，在終端機顯示狀態 (此處僅提供一個預設，實際在 startChat 會被重寫以支援平滑過渡)
   agent.onToolCall = (toolName, args) => {
@@ -422,6 +422,7 @@ const setupConfig = async () => {
       choices: [
         { name: '🔌 模型提供商與 API 設定', value: 'provider' },
         { name: '🛡️ 安全性與權限管理', value: 'security' },
+        { name: '📝 編輯全域系統提示詞 (Global Prompt)', value: 'globalPrompt' },
         {
           name: `🚀 全域啟動指令 (spc) [${isGlobalLinked ? chalk.green('已連結') : chalk.red('已斷開')}]`,
           value: 'installGlobal'
@@ -536,6 +537,53 @@ const setupConfig = async () => {
     console.log(chalk.green('\n✅ 安全設定已更新！\n'));
     await inquirer.prompt([{ type: 'input', name: 'pause', message: '按回車鍵返回選單...', prefix: '>' }]);
     return setupConfig();
+  }
+
+  if (configType === 'globalPrompt') {
+    console.log(chalk.cyan('\n📝 編輯全域系統提示詞 (Global System Prompt)'));
+    console.log(chalk.dim('將為您啟動系統編輯器。編輯完成後「儲存並關閉」視窗即會生效。'));
+    console.log(chalk.dim('提示：清空內容或輸入 "none" 可還原為系統預設。\n'));
+
+    const configDir = path.dirname(configManager.getConfigPath());
+    const tempFilePath = path.join(configDir, '.spc_prompt_tmp.txt');
+    const initialContent = currentConfig.globalPrompt || '';
+    fs.writeFileSync(tempFilePath, initialContent, 'utf8');
+
+    try {
+      const editor = process.env.EDITOR || process.env.VISUAL || (process.platform === 'win32' ? 'notepad' : 'nano');
+      
+      // 🚀 對 Windows 進行特殊處理，確保同步等待
+      if (process.platform === 'win32' && editor === 'notepad') {
+        execSync(`cmd /c start /wait notepad "${tempFilePath}"`, { stdio: 'inherit' });
+      } else {
+        execSync(`${editor} "${tempFilePath}"`, { stdio: 'inherit' });
+      }
+
+      // 🔄 重置終端機狀態 (防止 Inquirer 卡死關鍵步)
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+      }
+
+      const newPrompt = fs.readFileSync(tempFilePath, 'utf8').trim();
+
+      if (newPrompt.toLowerCase() === 'none' || !newPrompt) {
+        configManager.updateGlobalPrompt('');
+        console.log(chalk.green('\n✅ 已清除全域提示，將還原為系統內建預設。'));
+      } else {
+        configManager.updateGlobalPrompt(newPrompt);
+        console.log(chalk.green('\n✅ 全域系統提示詞已更新！'));
+      }
+    } catch (e: any) {
+      console.log(chalk.red(`\n❌ 編輯器啟動失敗: ${e.message}`));
+    } finally {
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+    }
+
+    await inquirer.prompt([{ type: 'input', name: 'pause', message: '按回車鍵返回選單...', prefix: '>' }]);
+    
+    // 🔐 恢復正軌：移除 setTimeout 遞迴，改用標準遞迴以維持正確的呼叫棧
+    return await setupConfig();
   }
 
   // 模型提供商設定邏輯
@@ -715,25 +763,25 @@ const handleFolderOption = () => {
 program
   .command('chat')
   .description('進入互動對話模式')
-  .action(() => {
+  .action(async () => {
     handleFolderOption();
-    startChat();
+    await startChat();
   });
 
 program
   .command('ask [question]')
   .description('快速提問專用指令')
-  .action((question) => {
+  .action(async (question) => {
     handleFolderOption();
-    quickAsk(question);
+    await quickAsk(question);
   });
 
 program
   .command('config')
   .description('設定 API Key 與模型參數')
-  .action(() => {
+  .action(async () => {
     handleFolderOption();
-    setupConfig();
+    await setupConfig();
   });
 
 // --- 啟動邏輯 ---
@@ -741,7 +789,7 @@ program
 const runInteractive = async () => {
   await loadPlugins();
   handleFolderOption();
-  mainMenu();
+  await mainMenu();
 };
 
 // 1. 先進行初步解析，確保全域參數 (-f) 被讀取
@@ -754,12 +802,8 @@ const validCommands = ['chat', 'ask', 'config', 'help'];
 
 // 3. 判斷進入互動選單還是直接執行指令
 if (!subCommand || !validCommands.includes(subCommand)) {
-  (async () => {
-    await runInteractive();
-  })();
+  await runInteractive();
 } else {
-  (async () => {
-    await loadPlugins();
-    program.parse(process.argv);
-  })();
+  await loadPlugins();
+  program.parse(process.argv);
 }

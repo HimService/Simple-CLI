@@ -22,8 +22,9 @@ export interface AppConfig {
   };
   security: {
     allowRunCommand: boolean;
-    autoExecute: boolean; // 🆕 新增：在已授權情況下是否自動執行而不詢問
-  }
+    autoExecute: boolean; 
+  };
+  globalPrompt?: string;   // 🆕 新增：全域系統提示詞
 }
 
 /**
@@ -80,6 +81,13 @@ export class ConfigManager {
    */
   setDefaultProvider(provider: AppConfig['defaultProvider']) {
     this.conf.set('defaultProvider', provider);
+  }
+
+  /**
+   * 📝 更新全域系統提示詞
+   */
+  updateGlobalPrompt(prompt: string) {
+    this.conf.set('globalPrompt', prompt);
   }
 
   /**
