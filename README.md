@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="docs/icon.png" width="200" alt="Simple CLI Icon">
+</p>
+
 # 🚀 Simple CLI (Professional AI Agent Platform)
+
+---
 
 **Simple CLI** 是一個基於 TypeScript 構建的高級 AI 代理程式平台。它不僅僅是一個對話工具，更是一個具備「動作實施能力」的終端機助手。透過強大的工具連接器 (Tool Calling) 與動態插件系統，您可以讓 AI 直接操作您的檔案系統、執行系統指令，並透過自定義插件無限擴充其能力。
 
