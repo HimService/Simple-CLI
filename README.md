@@ -2,7 +2,7 @@
   <img src="docs/icon.png" width="200" alt="Simple CLI Icon">
 </p>
 
-# 🚀 Simple CLI (Professional AI Agent Platform)
+# 🚀 Simple CLI (AI代理CLI)
 
 ---
 
